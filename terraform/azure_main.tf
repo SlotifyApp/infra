@@ -22,7 +22,7 @@ resource "azuread_application" "slotify" {
     homepage_url = "https://localhost:3000"
     logout_url   = "https://localhost:3000"
     redirect_uris = [
-      "http://localhost:3000/api/auth/callback/microsoft-entra-id"
+      "http://localhost:8080/api/auth/callback"
     ]
 
     implicit_grant {
@@ -102,15 +102,23 @@ resource "azuread_application" "slotify" {
   }
 }
 
+# Test users
+resource "azuread_user" "saath" {
+  user_principal_name = "saath@Slotify7.onmicrosoft.com"
+  display_name        = "Saath Satheesh"
+  mail_nickname       = "Saath"
+  password            = "BlueBottle41"
+}
+
 # Create a service principal for authentication
 resource "azuread_service_principal" "slotify_sp" {
   client_id = azuread_application.slotify.client_id
 }
 
-# Create a client secret (for NextAuth use)
+# Create a client secret
 resource "azuread_application_password" "slotify_secret" {
   application_id = azuread_application.slotify.id
-  display_name   = "NextAuthSecret"
+  display_name   = "client_secret"
   end_date       = timeadd("2025-01-30T12:45:05Z", "10000h")
 }
 

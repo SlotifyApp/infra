@@ -25,5 +25,5 @@ az login --allow-no-subscriptions
 ```bash
 terraform plan # Dry-run, see what tf needs to do
 terraform apply # Apply tf script
-terraform output client-secret
+terraform output client_secret # view microsoft client secret
 ```
