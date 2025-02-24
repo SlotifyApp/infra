@@ -102,14 +102,6 @@ resource "azuread_application" "slotify" {
   }
 }
 
-# Test users
-resource "azuread_user" "saath" {
-  user_principal_name = "saath@Slotify7.onmicrosoft.com"
-  display_name        = "Saath Satheesh"
-  mail_nickname       = "Saath"
-  password            = "BlueBottle41"
-}
-
 # Create a service principal for authentication
 resource "azuread_service_principal" "slotify_sp" {
   client_id = azuread_application.slotify.client_id
