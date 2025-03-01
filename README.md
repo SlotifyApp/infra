@@ -8,6 +8,7 @@ This repo contains infrastructure as code. Currently, contains:
 ## Setup
 
 - Make sure to first configure [AWS CDK along with any prequisites](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html).
+  Note: configure default region to be 'eu-west-2' for aws cli
 
 - Make sure to install [terraform](https://developer.hashicorp.com/terraform/install)
 
