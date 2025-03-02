@@ -7,6 +7,9 @@ terraform {
   }
 }
 
+variable "HOMEPAGE_URL" {}
+variable "REDIRECT_URI" {}
+
 provider "azuread" {}
 
 # Get current Azure AD client details
@@ -19,10 +22,10 @@ resource "azuread_application" "slotify" {
 
   # Set up OAuth2 authentication
   web {
-    homepage_url = "https://localhost:3000"
-    logout_url   = "https://localhost:3000"
+    homepage_url = "${var.HOMEPAGE_URL}"
+    logout_url   = "${var.HOMEPAGE_URL}"
     redirect_uris = [
-      "http://localhost:8080/api/auth/callback"
+      "${var.REDIRECT_URI}"
     ]
 
     implicit_grant {

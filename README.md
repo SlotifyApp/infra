@@ -23,8 +23,15 @@ az login --allow-no-subscriptions
 
 ## Terraform
 
+Create a `terraform/terraform.prod.tfvars` file with the contents:
+
+```bash
+HOMEPAGE_URL = <HOMEPAGE_URL>
+REDIRECT_URI = <REDIRECT_URL>
+```
+
 ```bash
 terraform plan # Dry-run, see what tf needs to do
-terraform apply # Apply tf script
+terraform apply -var-file=terraform.prod.tfvars # Apply tf script
 terraform output client_secret # view microsoft client secret
 ```
