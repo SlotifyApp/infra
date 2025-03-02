@@ -65,3 +65,85 @@ If the EC2 instance has been reset, then after `cdk deploy` do:
  aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin <AWS_ECR_URL>
  # now add to the ~/.docker/config.json, "credsStore": "ecr-login"
 ```
+
+Set up SSL certifications using certbot:
+
+Also update the `/etc/nginx/nginx.conf`
+
+```
+# For more information on configuration, see:
+#   * Official English Documentation: http://nginx.org/en/docs/
+#   * Official Russian Documentation: http://nginx.org/ru/docs/
+
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log notice;
+pid /run/nginx.pid;
+
+# Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+
+log_format detailed_logs '$remote_addr - $remote_user [$time_local] "$request" '
+                           '$status $body_bytes_sent "$http_referer" '
+                           '"$http_user_agent" "$http_x_forwarded_for" '
+                          '$request_body';
+
+    access_log /var/log/nginx/access.log detailed_logs;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile            on;
+    tcp_nopush          on;
+    keepalive_timeout   65;
+    types_hash_max_size 4096;
+
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+
+    # Load modular configuration files from the /etc/nginx/conf.d directory.
+    # See http://nginx.org/en/docs/ngx_core_module.html#include
+    # for more information.
+    include /etc/nginx/conf.d/*.conf;
+
+
+
+# Settings for a TLS enabled server.
+#
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name api.slotify.saath.dev;
+
+    # SSL certificates
+    ssl_certificate /etc/letsencrypt/live/api.slotify.saath.dev/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/api.slotify.saath.dev/privkey.pem; # managed by Certbot
+
+    # Ensure secure headers are set for the proxy
+    location / {
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' 'https://main.duytbcxjcwx1l.amplifyapp.com' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PATCH' always;
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, X-Requested-With' always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;  # Allow credentials
+            return 204;
+        }
+        proxy_pass http://localhost:80;  # Backend API is running on port 80 inside EC2
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+}
+```
