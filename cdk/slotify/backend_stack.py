@@ -3,6 +3,8 @@ import aws_cdk.aws_ecr as ecr
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_logs as logs
 import aws_cdk.aws_rds as rds
+import aws_cdk.aws_sagemaker as sagemaker
+import aws_cdk.aws_s3 as s3
 from aws_cdk import RemovalPolicy, Stack
 from constructs import Construct
 
@@ -29,6 +31,8 @@ class BackendStack(Stack):
         self.create_rds_instance(vpc, rds_sg)
 
         self.create_ecr_repo()
+
+        self.create_sagemaker()
 
     def create_ec2_instance(
         self, vpc: ec2.Vpc, sg: ec2.SecurityGroup, key: ec2.IKeyPair
@@ -226,3 +230,26 @@ class BackendStack(Stack):
             repository_name="ecr-slotify-api",
             removal_policy=RemovalPolicy.DESTROY,
         )
+
+    def create_sagemaker(self):
+        # Create sagemaker role
+        role = iam.Role(
+            self,
+            "SagemakerCDKRole",
+            assumed_by=iam.ServicePrincipal("sagemaker.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AmazonSageMakerFullAccess"
+                ),
+            ],
+        )
+        
+        # Create s3 bucket to store data
+        bucket = s3.CfnBucket(self, "amzn-s3-slotify-sagemaker", bucket_name="amzn-s3-slotify-sagemaker")
+        
+        # Create sagemaker notebook
+        sagemaker.CfnNotebookInstance(self, "SlotifyNotebookInstance",
+                                instance_type="ml.t2.medium",
+                                role_arn=role.role_arn,
+                                default_code_repository="https://github.com/SlotifyApp/ai.git"
+                            )
