@@ -105,6 +105,15 @@ resource "azuread_application" "slotify" {
       id   = "cb8f45a0-5c2e-4ea1-b803-84b870a7d7ec" # Place.Read.All
       type = "Scope"
     }
+
+    resource_access {
+      id   = "b528084d-ad10-4598-8b93-929746b4d7d6" # People.Read.All
+      type = "Role"
+    }
+    resource_access {
+      id   = "b89f9189-71a5-4e70-b041-9887f0bc7e4a" # People.Read.All
+      type = "Scope"
+    }
   }
 
   feature_tags {
