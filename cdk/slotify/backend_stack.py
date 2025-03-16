@@ -32,7 +32,9 @@ class BackendStack(Stack):
 
         self.create_ecr_repo()
 
-        self.create_sagemaker()
+        self.create_s3_bucket(vpc)
+        
+        self.create_sagemaker(vpc)
 
     def create_ec2_instance(
         self, vpc: ec2.Vpc, sg: ec2.SecurityGroup, key: ec2.IKeyPair
@@ -230,8 +232,29 @@ class BackendStack(Stack):
             repository_name="ecr-slotify-api",
             removal_policy=RemovalPolicy.DESTROY,
         )
-
-    def create_sagemaker(self):
+    
+    def create_s3_bucket(self, vpc: ec2.Vpc):
+        # Create s3 bucket to store data
+        bucket = s3.CfnBucket(self, "amzn-s3-slotify-sagemaker", bucket_name="amzn-s3-slotify-sagemaker")
+        
+        # allow s3 to be accessed by the vpc
+        vpc.add_gateway_endpoint("s3", ec2.GatewayVpcEndpointOptions(
+            service=ec2.GatewayVpcEndpointAwsService.S3
+        ))
+        
+        # Allow access to the s3 bucket
+        s3.CfnAccessPoint(
+            self,
+            "s3_access",
+            bucket=bucket.bucket_name, 
+            vpc_configuration=s3.CfnAccessPoint.VpcConfigurationProperty(
+                vpc_id=vpc.vpc_id
+            )
+        )
+        
+        return bucket
+    
+    def create_sagemaker(self, vpc: ec2.Vpc):
         # Create sagemaker role
         role = iam.Role(
             self,
@@ -244,9 +267,7 @@ class BackendStack(Stack):
             ],
         )
         
-        # Create s3 bucket to store data
-        bucket = s3.CfnBucket(self, "amzn-s3-slotify-sagemaker", bucket_name="amzn-s3-slotify-sagemaker")
-        
+    
         # Create sagemaker notebook
         sagemaker.CfnNotebookInstance(self, "SlotifyNotebookInstance",
                                 instance_type="ml.t2.medium",
