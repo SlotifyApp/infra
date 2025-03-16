@@ -18,6 +18,7 @@ class BackendStack(Stack):
 
         ec2_sg = self.create_ec2_security_group(vpc)
         rds_sg = self.create_rds_security_group(vpc, ec2_sg)
+        sm_sg = self.create_sm_security_group(vpc)
 
         key_pair = ec2.KeyPair(
             self,
@@ -217,6 +218,33 @@ class BackendStack(Stack):
 
         return sg
 
+    def create_sm_security_group(
+        self, vpc: ec2.Vpc,
+    ) -> ec2.SecurityGroup:
+        sg = ec2.SecurityGroup(
+            self,
+            "SMSecurityGroup",
+            vpc= vpc,
+            allow_all_outbound= True,
+            description="Allow access from sagemaker EC2 instances",
+        )
+
+        # Allow HTTPS (port 443) for communications iwth SageMaker endpoints
+        sg.add_ingress_rule(
+            ec2.Peer.any_ipv4,  # Allow any peer ec2 instances to connect
+            ec2.Port.tcp(443),
+            "Allow HTTPS traffic",
+        )
+        
+        # Allow Jupyter Notebook (port 8888) access to its instances
+        sg.add_ingress_rule(
+            ec2.Peer.any_ipv4,  # Allow any peer ec2 instances to connect
+            ec2.Port.tcp(8888),
+            "Allow Jupyter Notebook access",
+        )
+        
+        return sg
+    
     def create_ecr_repo(self):
         ecr.Repository(
             self,
@@ -254,7 +282,7 @@ class BackendStack(Stack):
         
         return bucket
     
-    def create_sagemaker(self, vpc: ec2.Vpc):
+    def create_sagemaker(self, vpc: ec2.Vpc, sg: ec2.SecurityGroup):
         # Create sagemaker role
         role = iam.Role(
             self,
@@ -265,6 +293,7 @@ class BackendStack(Stack):
                     "AmazonSageMakerFullAccess"
                 ),
             ],
+            # Find and add IAM get role permission
         )
         
     
@@ -272,5 +301,7 @@ class BackendStack(Stack):
         sagemaker.CfnNotebookInstance(self, "SlotifyNotebookInstance",
                                 instance_type="ml.t2.medium",
                                 role_arn=role.role_arn,
-                                default_code_repository="https://github.com/SlotifyApp/ai.git"
+                                default_code_repository="https://github.com/SlotifyApp/ai.git",
+                                security_group_ids=[sg.unique_id],
+                                subnet_id=vpc.private_subnets[0].subnet_id
                             )
