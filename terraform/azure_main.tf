@@ -97,6 +97,14 @@ resource "azuread_application" "slotify" {
       type = "Scope"
     }
 
+    resource_access {
+      id   = "913b9306-0ce1-42b8-9137-6a7df690a760" # Place.Read.All
+      type = "Role"
+    }
+    resource_access {
+      id   = "cb8f45a0-5c2e-4ea1-b803-84b870a7d7ec" # Place.Read.All
+      type = "Scope"
+    }
   }
 
   feature_tags {
