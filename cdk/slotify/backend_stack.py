@@ -291,10 +291,18 @@ class BackendStack(Stack):
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name(
                     "AmazonSageMakerFullAccess"
-                ),
+                ), iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AmazonSageMakerNotebooksServiceRolePolicy"
+                ),  iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "AmazonS3FullAccess"
+                )
             ],
-            # Find and add IAM get role permission
         )
+        
+        role.add_to_policy(iam.PolicyStatement(
+            actions=["iam:GetRole"],
+            resources=[role.role_arn]
+        ))
         
     
         # Create sagemaker notebook
