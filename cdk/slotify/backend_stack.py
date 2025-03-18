@@ -35,7 +35,7 @@ class BackendStack(Stack):
 
         self.create_s3_bucket(vpc)
         
-        self.create_sagemaker(vpc)
+        self.create_sagemaker(vpc, sm_sg)
 
     def create_ec2_instance(
         self, vpc: ec2.Vpc, sg: ec2.SecurityGroup, key: ec2.IKeyPair
@@ -231,14 +231,14 @@ class BackendStack(Stack):
 
         # Allow HTTPS (port 443) for communications iwth SageMaker endpoints
         sg.add_ingress_rule(
-            ec2.Peer.any_ipv4,  # Allow any peer ec2 instances to connect
+            ec2.Peer.any_ipv4(),  # Allow any peer ec2 instances to connect
             ec2.Port.tcp(443),
             "Allow HTTPS traffic",
         )
         
         # Allow Jupyter Notebook (port 8888) access to its instances
         sg.add_ingress_rule(
-            ec2.Peer.any_ipv4,  # Allow any peer ec2 instances to connect
+            ec2.Peer.any_ipv4(),  # Allow any peer ec2 instances to connect
             ec2.Port.tcp(8888),
             "Allow Jupyter Notebook access",
         )
@@ -266,9 +266,10 @@ class BackendStack(Stack):
         bucket = s3.CfnBucket(self, "amzn-s3-slotify-sagemaker", bucket_name="amzn-s3-slotify-sagemaker")
         
         # allow s3 to be accessed by the vpc
-        vpc.add_gateway_endpoint("s3", ec2.GatewayVpcEndpointOptions(
-            service=ec2.GatewayVpcEndpointAwsService.S3
-        ))
+        vpc.add_gateway_endpoint(
+            id="S3", 
+            service=ec2.GatewayVpcEndpointAwsService.S3,
+        )
         
         # Allow access to the s3 bucket
         s3.CfnAccessPoint(
@@ -311,5 +312,5 @@ class BackendStack(Stack):
                                 role_arn=role.role_arn,
                                 default_code_repository="https://github.com/SlotifyApp/ai.git",
                                 security_group_ids=[sg.unique_id],
-                                subnet_id=vpc.private_subnets[0].subnet_id
+                                subnet_id=vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnet_ids[0]
                             )
