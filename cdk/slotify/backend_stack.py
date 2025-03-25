@@ -3,8 +3,9 @@ import aws_cdk.aws_ecr as ecr
 import aws_cdk.aws_iam as iam
 import aws_cdk.aws_logs as logs
 import aws_cdk.aws_rds as rds
-import aws_cdk.aws_sagemaker as sagemaker
-import aws_cdk.aws_s3 as s3
+# import aws_cdk.aws_sagemaker as sagemaker
+# import aws_cdk.aws_s3 as s3
+# import aws_cdk.aws_cloudformation as cfn
 from aws_cdk import RemovalPolicy, Stack
 from constructs import Construct
 
@@ -18,7 +19,7 @@ class BackendStack(Stack):
 
         ec2_sg = self.create_ec2_security_group(vpc)
         rds_sg = self.create_rds_security_group(vpc, ec2_sg)
-        sm_sg = self.create_sm_security_group(vpc)
+        
 
         key_pair = ec2.KeyPair(
             self,
@@ -32,10 +33,11 @@ class BackendStack(Stack):
         self.create_rds_instance(vpc, rds_sg)
 
         self.create_ecr_repo()
-
-        self.create_s3_bucket(vpc)
         
-        self.create_sagemaker(vpc, sm_sg)
+        # sm_sg = self.create_sm_security_group(vpc)
+        # self.create_s3_bucket(vpc)
+        
+        # self.create_sagemaker(vpc, sm_sg)
 
     def create_ec2_instance(
         self, vpc: ec2.Vpc, sg: ec2.SecurityGroup, key: ec2.IKeyPair
@@ -72,7 +74,8 @@ class BackendStack(Stack):
                 ),
             },
         )
-        ec2.Instance(
+        
+        ec2_inst = ec2.Instance(
             self,
             "ec2-slotify-api",
             vpc=vpc,
@@ -105,6 +108,7 @@ class BackendStack(Stack):
                 """
             ),
         )
+        
 
     def create_rds_instance(self, vpc: ec2.Vpc, sg: ec2.SecurityGroup):
         rds.DatabaseInstance(
@@ -218,33 +222,6 @@ class BackendStack(Stack):
 
         return sg
 
-    def create_sm_security_group(
-        self, vpc: ec2.Vpc,
-    ) -> ec2.SecurityGroup:
-        sg = ec2.SecurityGroup(
-            self,
-            "SMSecurityGroup",
-            vpc= vpc,
-            allow_all_outbound= True,
-            description="Allow access from sagemaker EC2 instances",
-        )
-
-        # Allow HTTPS (port 443) for communications iwth SageMaker endpoints
-        sg.add_ingress_rule(
-            ec2.Peer.any_ipv4(),  # Allow any peer ec2 instances to connect
-            ec2.Port.tcp(443),
-            "Allow HTTPS traffic",
-        )
-        
-        # Allow Jupyter Notebook (port 8888) access to its instances
-        sg.add_ingress_rule(
-            ec2.Peer.any_ipv4(),  # Allow any peer ec2 instances to connect
-            ec2.Port.tcp(8888),
-            "Allow Jupyter Notebook access",
-        )
-        
-        return sg
-    
     def create_ecr_repo(self):
         ecr.Repository(
             self,
@@ -261,56 +238,84 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
     
-    def create_s3_bucket(self, vpc: ec2.Vpc):
-        # Create s3 bucket to store data
-        bucket = s3.CfnBucket(self, "amzn-s3-slotify-sagemaker", bucket_name="amzn-s3-slotify-sagemaker")
-        
-        # allow s3 to be accessed by the vpc
-        vpc.add_gateway_endpoint(
-            id="S3", 
-            service=ec2.GatewayVpcEndpointAwsService.S3,
-        )
-        
-        # Allow access to the s3 bucket
-        access_point = s3.CfnAccessPoint(
-            self,
-            "s3_access",
-            bucket=bucket.ref, 
-            vpc_configuration=s3.CfnAccessPoint.VpcConfigurationProperty(
-                vpc_id=vpc.vpc_id
-            )
-        )
-        
-        access_point.add_dependency(bucket)
-        
-        return bucket
     
-    def create_sagemaker(self, vpc: ec2.Vpc, sg: ec2.SecurityGroup):
-        # Create sagemaker role
-        role = iam.Role(
-            self,
-            "SagemakerCDKRole",
-            assumed_by=iam.ServicePrincipal("sagemaker.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonSageMakerFullAccess"
-                ),  iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonS3FullAccess"
-                )
-            ],
-        )
+    # def create_sm_security_group(
+    #     self, vpc: ec2.Vpc,
+    # ) -> ec2.SecurityGroup:
+    #     sg = ec2.SecurityGroup(
+    #         self,
+    #         "SMSecurityGroup",
+    #         vpc= vpc,
+    #         allow_all_outbound= True,
+    #         description="Allow access from sagemaker EC2 instances",
+    #     )
+
+    #     # Allow HTTPS (port 443) for communications iwth SageMaker endpoints
+    #     sg.add_ingress_rule(
+    #         ec2.Peer.any_ipv4(),  # Allow any peer ec2 instances to connect
+    #         ec2.Port.tcp(443),
+    #         "Allow HTTPS traffic",
+    #     )
         
-        role.add_to_policy(iam.PolicyStatement(
-            actions=["iam:GetRole"],
-            resources=[role.role_arn]
-        ))
+    #     # Allow Jupyter Notebook (port 8888) access to its instances
+    #     sg.add_ingress_rule(
+    #         ec2.Peer.any_ipv4(),  # Allow any peer ec2 instances to connect
+    #         ec2.Port.tcp(8888),
+    #         "Allow Jupyter Notebook access",
+    #     )
+        
+    #     return sg
+    
+    # def create_s3_bucket(self, vpc: ec2.Vpc):
+    #     # Create s3 bucket to store data
+    #     bucket = s3.CfnBucket(self, "amzn-s3-slotify-sagemaker", bucket_name="amzn-s3-slotify-sagemaker")
+        
+    #     # allow s3 to be accessed by the vpc
+    #     vpc.add_gateway_endpoint(
+    #         id="S3", 
+    #         service=ec2.GatewayVpcEndpointAwsService.S3,
+    #     )
+        
+    #     # Allow access to the s3 bucket
+    #     access_point = s3.CfnAccessPoint(
+    #         self,
+    #         "s3_access",
+    #         bucket=bucket.ref, 
+    #         vpc_configuration=s3.CfnAccessPoint.VpcConfigurationProperty(
+    #             vpc_id=vpc.vpc_id
+    #         )
+    #     )
+        
+    #     access_point.add_dependency(bucket)
+        
+    #     return bucket
+    
+    # def create_sagemaker(self, vpc: ec2.Vpc, sg: ec2.SecurityGroup):
+    #     # Create sagemaker role
+    #     role = iam.Role(
+    #         self,
+    #         "SagemakerCDKRole",
+    #         assumed_by=iam.ServicePrincipal("sagemaker.amazonaws.com"),
+    #         managed_policies=[
+    #             iam.ManagedPolicy.from_aws_managed_policy_name(
+    #                 "AmazonSageMakerFullAccess"
+    #             ),  iam.ManagedPolicy.from_aws_managed_policy_name(
+    #                 "AmazonS3FullAccess"
+    #             )
+    #         ],
+    #     )
+        
+    #     role.add_to_policy(iam.PolicyStatement(
+    #         actions=["iam:GetRole"],
+    #         resources=[role.role_arn]
+    #     ))
         
     
-        # Create sagemaker notebook
-        sagemaker.CfnNotebookInstance(self, "SlotifyNotebookInstance",
-                                instance_type="ml.t2.medium",
-                                role_arn=role.role_arn,
-                                default_code_repository="https://github.com/SlotifyApp/ai.git",
-                                security_group_ids=[sg.security_group_id],
-                                subnet_id=vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnet_ids[0]
-                            )
+    #     # Create sagemaker notebook
+    #     sagemaker.CfnNotebookInstance(self, "SlotifyNotebookInstance",
+    #                             instance_type="ml.t2.medium",
+    #                             role_arn=role.role_arn,
+    #                             default_code_repository="https://github.com/SlotifyApp/ai.git",
+    #                             security_group_ids=[sg.security_group_id],
+    #                             subnet_id=vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnet_ids[0]
+    #                         )
