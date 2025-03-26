@@ -272,14 +272,16 @@ class BackendStack(Stack):
         )
         
         # Allow access to the s3 bucket
-        s3.CfnAccessPoint(
+        access_point = s3.CfnAccessPoint(
             self,
             "s3_access",
-            bucket=bucket.bucket_name, 
+            bucket=bucket.ref, 
             vpc_configuration=s3.CfnAccessPoint.VpcConfigurationProperty(
                 vpc_id=vpc.vpc_id
             )
         )
+        
+        access_point.add_dependency(bucket)
         
         return bucket
     
@@ -292,8 +294,6 @@ class BackendStack(Stack):
             managed_policies=[
                 iam.ManagedPolicy.from_aws_managed_policy_name(
                     "AmazonSageMakerFullAccess"
-                ), iam.ManagedPolicy.from_aws_managed_policy_name(
-                    "AmazonSageMakerNotebooksServiceRolePolicy"
                 ),  iam.ManagedPolicy.from_aws_managed_policy_name(
                     "AmazonS3FullAccess"
                 )
@@ -311,6 +311,6 @@ class BackendStack(Stack):
                                 instance_type="ml.t2.medium",
                                 role_arn=role.role_arn,
                                 default_code_repository="https://github.com/SlotifyApp/ai.git",
-                                security_group_ids=[sg.unique_id],
+                                security_group_ids=[sg.security_group_id],
                                 subnet_id=vpc.select_subnets(subnet_type=ec2.SubnetType.PUBLIC).subnet_ids[0]
                             )
